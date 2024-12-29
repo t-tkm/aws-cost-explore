@@ -116,3 +116,20 @@ dmypy.json
 pip-wheel-metadata/
 pip-wheel-cache/
 __pypackages__/
+
+# AWS CDK
+cdk.out/
+cdk.context.json
+.context/
+*.tsbuildinfo
+
+# Node.js関連（CDKがnpmを使用している場合）
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Docker関連（プロジェクトでDockerを使う場合）
+*.swp
+*.swo
+docker-compose.override.yml

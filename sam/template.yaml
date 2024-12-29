@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Notify AWS billing to Teams using Lambda
+
+Globals:
+  Function:
+    Timeout: 60
+
+Parameters:
+  TeamsWebhookUrl:
+    Type: String
+    Description: "Webhook URL for Teams notifications"
+    NoEcho: true
+
+  UseTeamsPost:
+    Type: String
+    Description: "Flag to enable or disable Teams posting (yes/no)"
+    Default: "false"
+
+Resources:
+  BillingIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "BillingNotificationToTeamsLambdaPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "arn:aws:logs:*:*:*"
+              - Effect: Allow
+                Action:
+                  - "ce:GetCostAndUsage"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "sns:Publish"
+                Resource: "arn:aws:sns:*:*:*"
+
+  BillingNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Role: !GetAtt BillingIamRole.Arn
+      Environment:
+        Variables:
+          USE_TEAMS_POST: !Ref UseTeamsPost
+          TEAMS_WEBHOOK_URL: !Ref TeamsWebhookUrl
+      Events:
+        NotifyTeams:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 * * ? *)
+
+Outputs:
+  BillingNotificationLambdaArn:
+    Description: "ARN of the Billing Notification Lambda Function"
+    Value: !GetAtt BillingNotificationFunction.Arn
+  BillingNotificationLambdaRoleArn:
+    Description: "ARN of the IAM Role for the Billing Notification Lambda Function"
+    Value: !GetAtt BillingIamRole.Arn
