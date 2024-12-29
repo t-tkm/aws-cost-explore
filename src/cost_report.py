@@ -192,27 +192,52 @@ def print_report(title: str, services_cost: List[str]) -> None:
         print("サービスごとの費用データはありません。")
     print("------------------------------------------------------\n")
 
-
 def post_to_teams(title: str, services_cost: List[str]) -> None:
     """
-    Teams Webhookにレポートを送信する。
+    Teams WebhookにAdaptive Card形式でメッセージを送信する。
     """
-    config = get_config()
-    teams_webhook_url = config["TEAMS_WEBHOOK_URL"]
-
+    teams_webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
     if not teams_webhook_url:
-        raise ValueError("TEAMS_WEBHOOK_URL is not set in the environment variables.")
+        raise ValueError("TEAMS_WEBHOOK_URL is環境変数で設定されていません。")
 
-    content_lines = [title] + services_cost
-    payload = {"text": "\n".join(content_lines)}
+    # サービスごとの費用データを1行ずつ整形
+    services_text = "\n".join(services_cost) if services_cost else "サービスごとの費用データはありません。"
 
+    # Adaptive Card形式のメッセージを作成
+    message = {
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.2",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": f"### {title}\n\n{services_text}",
+                            "wrap": True,
+                            "markdown": True
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+
+    # Teams WebhookにPOSTリクエストを送信
     try:
-        response = requests.post(teams_webhook_url, data=json.dumps(payload))
+        response = requests.post(
+            url=teams_webhook_url,
+            data=json.dumps(message),
+            headers={'Content-Type': 'application/json'}
+        )
         response.raise_for_status()
-        logger.info("Successfully posted cost report to Teams.")
+        logger.info("Teamsへの通知に成功しました。")
     except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to post to Teams: {e}")
-        raise
+        logger.error(f"Teams Webhookへの通知に失敗しました: {e}")
+        raise RuntimeError("Teams通知に失敗しました。") from e
+
 
 
 def main() -> None:
