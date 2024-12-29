@@ -105,7 +105,7 @@ INFO:botocore.credentials:Found credentials in environment variables.
 ------------------------------------------------------
 ```
 
-<img width="320" alt="teams通知サンプル画像" src="img/teams_notification.png">
+<img width="480" alt="teams通知サンプル画像" src="img/teams_notification.png">
 
 ## ライセンス
 
