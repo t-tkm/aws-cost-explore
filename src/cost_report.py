@@ -238,7 +238,17 @@ def post_to_teams(title: str, services_cost: List[str]) -> None:
         logger.error(f"Teams Webhookへの通知に失敗しました: {e}")
         raise RuntimeError("Teams通知に失敗しました。") from e
 
-
+def get_account_id() -> str:
+    """
+    AWSアカウントIDを取得する。
+    """
+    try:
+        sts_client = boto3.client("sts")
+        account_id = sts_client.get_caller_identity()["Account"]
+        return account_id
+    except botocore.exceptions.ClientError as e:
+        logger.error(f"Failed to fetch AWS Account ID: {e}")
+        raise RuntimeError("AWS Account IDの取得に失敗しました。") from e
 
 def main() -> None:
     """
@@ -251,6 +261,10 @@ def main() -> None:
     # USE_TEAMS_POST が True なら TEAMS_WEBHOOK_URL が必要
     if use_teams_post and not teams_webhook_url:
         raise ValueError("TEAMS_WEBHOOK_URL is not set in the environment variables.")
+
+    # AWSアカウントIDを取得
+    account_id = get_account_id()
+    logger.info(f"AWS Account ID: {account_id}")
 
     # boto3 CostExplorer クライアントをモック化できるよう必ず get_client() 経由にする
     client = get_client()
@@ -265,6 +279,7 @@ def main() -> None:
     title_after, services_after = handle_cost_report(
         explorer, period, include_credit=True, start_day=start_day_str, end_day=end_day_str
     )
+    title_after = f"AWSアカウント {account_id}\n" + title_after
     print_report(title_after, services_after)
     if use_teams_post:
         post_to_teams(title_after, services_after)
@@ -273,6 +288,7 @@ def main() -> None:
     title_before, services_before = handle_cost_report(
         explorer, period, include_credit=False, start_day=start_day_str, end_day=end_day_str
     )
+    title_before = f"AWSアカウント {account_id}\n" + title_before
     print_report(title_before, services_before)
     if use_teams_post:
         post_to_teams(title_before, services_before)
