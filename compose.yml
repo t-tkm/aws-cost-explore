@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  my_app:
+    platform: "linux/amd64"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: my_app
+    env_file:
+      - .env
